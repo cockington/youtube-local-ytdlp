@@ -51,14 +51,94 @@ def download_directory():
     return directory
 
 
-def ytdlp_command():
-    '''Command prefix for invoking yt-dlp, or None if it's not available'''
+EXECUTABLE_NAMES = ('yt-dlp', 'ytdlp', 'yt-dlp_x86', 'yt-dlp_min')
+_version_cache = {}     # (command tuple, mtime) -> version string or None
+
+
+def _command_version(command):
+    '''Run `<command> --version`; returns e.g. "2026.10.26" or None'''
+    target = command[0]
+    if command[1:] == ['-m', 'yt_dlp']:
+        # Track the installed package, so a pip upgrade is noticed
+        spec = importlib.util.find_spec('yt_dlp')
+        if spec and spec.origin:
+            target = os.path.join(os.path.dirname(spec.origin), 'version.py')
+    try:
+        mtime = os.path.getmtime(target)
+    except OSError:
+        mtime = None
+    key = (tuple(command), mtime)
+    if key in _version_cache:
+        return _version_cache[key]
+    version = None
+    try:
+        creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0
+        out = subprocess.run(command + ['--version'], capture_output=True,
+                             timeout=60, stdin=subprocess.DEVNULL,
+                             creationflags=creationflags)
+        text = out.stdout.decode('utf-8', 'replace').strip()
+        if out.returncode == 0 and re.match(r'^\d{4}\.\d{2}\.\d{2}', text):
+            version = text.split()[0]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _version_cache[key] = version
+    return version
+
+
+def _version_key(version):
+    return tuple(int(x) for x in re.findall(r'\d+', version or ''))
+
+
+def ytdlp_candidates():
+    '''All usable yt-dlp installs as (command, version), newest first'''
+    configured = (settings.ytdlp_path or '').strip().strip('"')
+    if configured:
+        configured = os.path.expanduser(configured)
+        if os.path.isdir(configured):
+            for name in EXECUTABLE_NAMES:
+                found = shutil.which(name, path=configured)
+                if found:
+                    configured = found
+                    break
+        version = _command_version([configured])
+        return [([configured], version)] if version else []
+
+    commands = []
     if importlib.util.find_spec('yt_dlp') is not None:
-        return [sys.executable, '-m', 'yt_dlp']
-    exe = shutil.which('yt-dlp')
-    if exe:
-        return [exe]
-    return None
+        commands.append([sys.executable, '-m', 'yt_dlp'])
+    seen = set()
+    for name in EXECUTABLE_NAMES:
+        exe = shutil.which(name)
+        if exe and os.path.normcase(exe) not in seen:
+            seen.add(os.path.normcase(exe))
+            commands.append([exe])
+
+    candidates = []
+    for command in commands:
+        version = _command_version(command)
+        if version:
+            candidates.append((command, version))
+    candidates.sort(key=lambda c: _version_key(c[1]), reverse=True)
+    return candidates
+
+
+def ytdlp_command():
+    '''(command prefix, version) of the newest yt-dlp found, or (None, None).
+
+    YouTube regularly breaks older yt-dlp versions (typically HTTP 403
+    errors), so when several installs exist the newest one is used.'''
+    candidates = ytdlp_candidates()
+    if not candidates:
+        return None, None
+    return candidates[0]
+
+
+def describe_command(command):
+    if command is None:
+        return None
+    if command[1:] == ['-m', 'yt_dlp']:
+        return 'Python module (' + command[0] + ')'
+    return command[0]
 
 
 def ffmpeg_location():
@@ -145,6 +225,7 @@ def _new_job(video_id, kind, quality):
         'filename': None,
         'error': None,
         'warning': None,
+        'ytdlp': None,
         'created': time.time(),
         '_process': None,
         '_cancel': False,
@@ -204,12 +285,17 @@ def _run_job(job):
         if job['_cancel']:
             job['status'] = 'cancelled'
             return
-        command = ytdlp_command()
+        command, version = ytdlp_command()
         if command is None:
             job['status'] = 'error'
-            job['error'] = ('yt-dlp is not installed. Install it with '
-                            '"pip install yt-dlp".')
+            if (settings.ytdlp_path or '').strip():
+                job['error'] = ('The yt-dlp path in settings does not work: '
+                                + settings.ytdlp_path)
+            else:
+                job['error'] = ('yt-dlp is not installed. Install it with '
+                                '"pip install -U yt-dlp[default]".')
             return
+        job['ytdlp'] = describe_command(command) + ' ' + version
         ffmpeg = ffmpeg_location()
         if not ffmpeg:
             if job['kind'] == 'video':
@@ -259,6 +345,12 @@ def _run_job(job):
             if not job['error']:
                 job['error'] = (job.get('_last_line')
                                 or 'yt-dlp exited with code %d' % returncode)
+            if '403' in job['error']:
+                job['error'] += (' -- This usually means yt-dlp (' + version
+                                 + ') is outdated. Update it with '
+                                 '"yt-dlp -U" or "pip install -U yt-dlp[default]", '
+                                 'or set the yt-dlp path in settings to a '
+                                 'newer copy.')
 
 
 def start_download(video_id, kind, quality):
@@ -364,12 +456,15 @@ def downloads_page():
     job_list = [public_job(j) for j in reversed(jobs.values())]
     any_active = any(j['status'] in ('queued', 'downloading', 'processing')
                      for j in job_list)
+    candidates = ytdlp_candidates()
     return flask.render_template(
         'downloads.html',
         jobs=job_list,
         any_active=any_active,
         download_directory=download_directory(),
-        ytdlp_available=ytdlp_command() is not None,
+        ytdlp_available=bool(candidates),
+        ytdlp_installs=[(describe_command(c), v) for c, v in candidates],
+        ytdlp_path_set=bool((settings.ytdlp_path or '').strip()),
         ffmpeg_path=ffmpeg_location(),
         format_size=format_size,
     )

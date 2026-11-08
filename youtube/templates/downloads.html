@@ -64,7 +64,25 @@
     <h2>Downloads</h2>
     <div class="download-info">
         {% if not ytdlp_available %}
-            <p class="warning">yt-dlp is not installed. Install it with <code>pip install yt-dlp</code>, then restart youtube-local.</p>
+            {% if ytdlp_path_set %}
+                <p class="warning">The yt-dlp location in <a href="/youtube.com/settings">settings</a> does not point to a working yt-dlp.</p>
+            {% else %}
+                <p class="warning">yt-dlp is not installed. Install it with <code>pip install -U yt-dlp[default]</code>, or put yt-dlp on your PATH.</p>
+            {% endif %}
+        {% else %}
+            <div>Using yt-dlp {{ ytdlp_installs[0][1] }}: <span class="job-path">{{ ytdlp_installs[0][0] }}</span>
+                {% if ytdlp_path_set %}(set in <a href="/youtube.com/settings">settings</a>){% elif ytdlp_installs|length > 1 %}(newest of {{ ytdlp_installs|length }} found){% endif %}
+            </div>
+            {% if ytdlp_installs|length > 1 %}
+                <details class="job-meta">
+                    <summary>Other yt-dlp installs found</summary>
+                    <ul>
+                        {% for path, version in ytdlp_installs[1:] %}
+                            <li>{{ version }}: <span class="job-path">{{ path }}</span></li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endif %}
         {% endif %}
         {% if not ffmpeg_path %}
             <p class="warning">ffmpeg was not found. Full-quality video (separate video and audio streams) needs ffmpeg to merge; without it, video downloads fall back to pre-merged formats (usually 360p). Set its location in <a href="/youtube.com/settings">settings</a>.</p>
@@ -96,6 +114,7 @@
                 {% endif %}
                 {% if job['warning'] %}<div class="job-meta warning">{{ job['warning'] }}</div>{% endif %}
                 {% if job['error'] %}<div class="job-error">{{ job['error'] }}</div>{% endif %}
+                {% if job['ytdlp'] %}<div class="job-meta">yt-dlp: <span class="job-path">{{ job['ytdlp'] }}</span></div>{% endif %}
                 <div class="job-actions">
                     {% if job['status'] == 'finished' %}
                         <a href="/youtube.com/ytl-api/downloads/{{ job['id'] }}/file">Save to computer</a>

@@ -302,6 +302,16 @@ Leave blank to use <your home folder>/Downloads/youtube-local''',
         'category': 'downloads',
     }),
 
+    ('ytdlp_path', {
+        'type': str,
+        'default': '',
+        'label': 'yt-dlp location',
+        'comment': '''Path to the yt-dlp executable (or the folder containing it).
+Leave blank to automatically use the newest yt-dlp found
+(the Python module or yt-dlp/ytdlp on PATH).''',
+        'category': 'downloads',
+    }),
+
     ('ytdlp_ffmpeg_location', {
         'type': str,
         'default': '',
