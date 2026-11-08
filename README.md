@@ -1,4 +1,18 @@
-# youtube-local
+# youtube-local (yt-dlp edition)
+
+A fork of [user234683/youtube-local](https://github.com/user234683/youtube-local) with built-in **yt-dlp downloading**. Watch YouTube privately in your browser, and save any video as a full-quality **mp4 (video + audio)** or as **m4a audio** with one click.
+
+### What this fork adds
+* **Download with yt-dlp** section in every video's Download menu:
+  * **Video + audio (mp4)**: best video and best audio merged into one mp4, with an optional max-quality cap (2160p down to 360p). At equal resolution it prefers H.264/AAC so files play everywhere.
+  * **Audio only (m4a)**: YouTube's native AAC audio, no re-encoding.
+  * Live progress (percent, speed, time left) right in the page.
+* **Downloads page** (`/downloads`) listing every download, with cancel, retry and "Save to computer".
+* **Downloads settings**: download folder, ffmpeg location and number of simultaneous downloads.
+* Downloads go through Tor when "Route Tor" is set to include video.
+* ffmpeg is needed to merge high-quality video and audio. Without it, video downloads fall back to pre-merged formats (usually 360p).
+
+## About youtube-local
 
 ![screenshot](https://user-images.githubusercontent.com/28744867/64483429-8a890780-d1b6-11e9-8423-6956ff7c588d.png)
 youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy (Tor video routing is also provided as an option). Tor has high latency, so this will not be as fast network-wise as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
@@ -54,7 +68,7 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - [ ] Import youtube playlist into a local playlist
 - [ ] Rearrange items of local playlist
 - [x] Video qualities other than 360p and 720p by muxing video and audio
-- [ ] Corrected .m4a downloads
+- [x] Corrected .m4a downloads (via yt-dlp)
 - [x] Indicate if comments are disabled
 - [x] Indicate how many comments a video has
 - [ ] Featured channels page
@@ -162,9 +176,11 @@ Permission is hereby granted to the youtube-dl project at [https://github.com/yt
 
 ## Donate
 
-- Bitcoin: bc1qnxfm8mk2gdcdr56308794a4f97dd7wu6qawguw
-- Monero: 469tczUEVTX6Y7bMEgTyrUJ2K7R8qVNjn5eh5VVHKvi4QsbMD7vrFW8RaCqM1jmZMR9GM87yByvPKZb8gsSxUzrdGCM1yXv
-- Ethereum: 0x04828FFa6fa8F68535A22153300e50AfCDC342C4
+If you find this fork useful, donations are appreciated:
+
+- Bitcoin: bc1qy00zrkmve82l97azzgv970vu9er9rl2s756j2m
+- Monero: 85GYKTUDCijFzEAp32W8k1QuwsWvBbsX3AFbanhQPN4jYDGNbtEVGvqC8BP5DdxNDXNTsgiSP3qsEDEfZ3RkLbUKNFMGGgf
+- Ethereum: 0x767Ef3cfE5320AFBA7dD40a25e0cb332c760Da74
 
 ## Similar projects
 - [invidious](https://github.com/iv-org/invidious) Similar to this project, but also allows it to be hosted as a server to serve many users
