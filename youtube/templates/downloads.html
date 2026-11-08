@@ -1,0 +1,126 @@
+{% set page_title = 'Downloads' %}
+{% extends "base.html" %}
+
+{% block head %}
+    {% if any_active %}
+        <noscript><meta http-equiv="refresh" content="2"></noscript>
+    {% endif %}
+{% endblock %}
+
+{% block style %}
+    main{
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    .download-info{
+        margin-bottom: 15px;
+    }
+    .warning{
+        color: #c0392b;
+    }
+    .job-list{
+        list-style: none;
+        padding: 0;
+    }
+    .job{
+        background-color: var(--interface-color);
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .job-title{
+        font-weight: bold;
+        word-break: break-word;
+    }
+    .job-meta{
+        font-size: 0.9em;
+        opacity: 0.85;
+        margin: 4px 0;
+    }
+    .job progress{
+        width: 100%;
+    }
+    .job-actions{
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .job-actions form{
+        margin: 0;
+    }
+    .job-error{
+        color: #c0392b;
+        word-break: break-word;
+    }
+    .job-path{
+        font-family: monospace;
+        font-size: 0.85em;
+        word-break: break-all;
+    }
+{% endblock style %}
+
+{% block main %}
+    <h2>Downloads</h2>
+    <div class="download-info">
+        {% if not ytdlp_available %}
+            <p class="warning">yt-dlp is not installed. Install it with <code>pip install yt-dlp</code>, then restart youtube-local.</p>
+        {% endif %}
+        {% if not ffmpeg_path %}
+            <p class="warning">ffmpeg was not found. Full-quality video (separate video and audio streams) needs ffmpeg to merge; without it, video downloads fall back to pre-merged formats (usually 360p). Set its location in <a href="/youtube.com/settings">settings</a>.</p>
+        {% endif %}
+        <div>Saving to: <span class="job-path">{{ download_directory }}</span> (<a href="/youtube.com/settings">change</a>)</div>
+    </div>
+
+    {% if not jobs %}
+        <p>No downloads yet. Use the Download menu on a video page.</p>
+    {% endif %}
+    <ul class="job-list" id="job-list">
+        {% for job in jobs %}
+            <li class="job" data-job-id="{{ job['id'] }}">
+                <div class="job-title">
+                    <a href="/youtube.com/watch?v={{ job['video_id'] }}">{{ job['title'] or job['video_id'] }}</a>
+                </div>
+                <div class="job-meta">
+                    {{ 'Audio (m4a)' if job['kind'] == 'm4a' else 'Video (' + ('best quality' if job['quality'] == 'best' else job['quality'] + 'p max') + ')' }}
+                    &middot; <span class="job-status">{{ job['status'] }}</span>
+                    {% if job['status'] == 'downloading' %}
+                        &middot; {{ job['percent'] }}%
+                        {% if job['part'] > 1 %}(part {{ job['part'] }}){% endif %}
+                        {% if job['total_bytes'] %}&middot; {{ format_size(job['total_bytes']) }}{% endif %}
+                        {% if job['speed'] %}&middot; {{ format_size(job['speed']) }}/s{% endif %}
+                    {% endif %}
+                </div>
+                {% if job['status'] in ('queued', 'downloading', 'processing') %}
+                    <progress max="100" {% if job['status'] == 'downloading' %}value="{{ job['percent'] }}"{% endif %}></progress>
+                {% endif %}
+                {% if job['warning'] %}<div class="job-meta warning">{{ job['warning'] }}</div>{% endif %}
+                {% if job['error'] %}<div class="job-error">{{ job['error'] }}</div>{% endif %}
+                <div class="job-actions">
+                    {% if job['status'] == 'finished' %}
+                        <a href="/youtube.com/ytl-api/downloads/{{ job['id'] }}/file">Save to computer</a>
+                        <span class="job-path">{{ job['filepath'] }}</span>
+                    {% elif job['status'] in ('queued', 'downloading', 'processing') %}
+                        <form method="post" action="/youtube.com/ytl-api/downloads/{{ job['id'] }}/cancel">
+                            <button type="submit">Cancel</button>
+                        </form>
+                    {% elif job['status'] in ('error', 'cancelled') %}
+                        <form method="post" action="/youtube.com/ytl-api/download">
+                            <input type="hidden" name="video_id" value="{{ job['video_id'] }}">
+                            <input type="hidden" name="kind" value="{{ job['kind'] }}">
+                            <input type="hidden" name="quality" value="{{ job['quality'] }}">
+                            <button type="submit">Retry</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% if any_active %}
+        <script>
+            // Refresh while downloads are running
+            setTimeout(function(){ location.reload(); }, 1500);
+        </script>
+    {% endif %}
+{% endblock main %}

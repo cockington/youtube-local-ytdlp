@@ -293,6 +293,35 @@ Defaults to -1, which means no default value is forced and the browser will set 
         'category': 'interface',
     }),
 
+    ('ytdlp_download_directory', {
+        'type': str,
+        'default': '',
+        'label': 'yt-dlp download folder',
+        'comment': '''Folder where yt-dlp downloads are saved.
+Leave blank to use <your home folder>/Downloads/youtube-local''',
+        'category': 'downloads',
+    }),
+
+    ('ytdlp_ffmpeg_location', {
+        'type': str,
+        'default': '',
+        'label': 'ffmpeg location',
+        'comment': '''Path to ffmpeg (or the folder containing it).
+Leave blank to find it on PATH. ffmpeg is needed to merge
+high quality video and audio into one file.''',
+        'category': 'downloads',
+    }),
+
+    ('ytdlp_max_concurrent', {
+        'type': int,
+        'default': 2,
+        'label': 'Simultaneous downloads',
+        'comment': '',
+        'min': 1,
+        'max': 10,
+        'category': 'downloads',
+    }),
+
     ('autocheck_subscriptions', {
         'type': bool,
         'default': 0,
@@ -540,7 +569,7 @@ set_img_prefix()
 add_setting_changed_hook('proxy_images', set_img_prefix)
 
 
-categories = ['network', 'interface', 'playback', 'other']
+categories = ['network', 'interface', 'playback', 'downloads', 'other']
 def settings_page():
     if request.method == 'GET':
         settings_by_category = {categ: [] for categ in categories}

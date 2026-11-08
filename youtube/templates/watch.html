@@ -353,6 +353,36 @@
         li.download-format{
             margin-bottom: 7px;
         }
+        li.ytdlp-download{
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(var(--link-color-rgb), 0.25);
+        }
+            .ytdlp-heading, li.download-direct-heading{
+                font-weight: bold;
+                margin-bottom: 6px;
+            }
+            .ytdlp-controls{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+            }
+            .ytdlp-status{
+                margin-top: 6px;
+                word-break: break-word;
+            }
+                .ytdlp-status progress{
+                    width: 100%;
+                }
+                .ytdlp-status .ytdlp-error{
+                    color: #c0392b;
+                }
+            .ytdlp-all{
+                display: inline-block;
+                margin-top: 6px;
+                font-size: 0.9em;
+            }
             .download-link{
                 display: block;
                 background-color: rgba(var(--link-color-rgb), 0.07);
@@ -531,6 +561,30 @@ Reload without invidious (for usage of new identity button).</a>
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
             <ul class="download-dropdown-content">
+                <li class="ytdlp-download">
+                    <form id="ytdlp-form" method="post" action="/youtube.com/ytl-api/download">
+                        <input type="hidden" name="video_id" value="{{ video_id }}">
+                        <div class="ytdlp-heading">Download with yt-dlp</div>
+                        <div class="ytdlp-controls">
+                            <button type="submit" name="kind" value="video">Video + audio (mp4)</button>
+                            <label class="ytdlp-quality">Max quality
+                                <select name="quality">
+                                    <option value="best" selected>Best</option>
+                                    <option value="2160">2160p</option>
+                                    <option value="1440">1440p</option>
+                                    <option value="1080">1080p</option>
+                                    <option value="720">720p</option>
+                                    <option value="480">480p</option>
+                                    <option value="360">360p</option>
+                                </select>
+                            </label>
+                            <button type="submit" name="kind" value="m4a">Audio only (m4a)</button>
+                        </div>
+                        <div id="ytdlp-status" class="ytdlp-status" aria-live="polite"></div>
+                        <a class="ytdlp-all" href="/youtube.com/downloads">All downloads</a>
+                    </form>
+                </li>
+                <li class="download-direct-heading">Direct stream links</li>
                 {% for format in download_formats %}
                     <li class="download-format">
                         <a class="download-link" href="{{ format['url'] }}">
@@ -687,6 +741,7 @@ Reload without invidious (for usage of new identity button).</a>
         <!-- /plyr -->
     {% endif %}
     <script src="/youtube.com/static/js/common.js"></script>
+    <script src="/youtube.com/static/js/ytdlp-download.js"></script>
     <script src="/youtube.com/static/js/transcript-table.js"></script>
     {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
     {% if settings.use_comments_js %} <script src="/youtube.com/static/js/comments.js"></script> {% endif %}
